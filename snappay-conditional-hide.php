@@ -3,7 +3,7 @@
  * Plugin Name: SnappPay Conditional Gateway Hide
  * Plugin URI: https://github.com/nimashadman/snappay-conditional-hide
  * Description: مخفی کردن درگاه اسنپ‌پی ووکامرس بر اساس دسته‌بندی، برند یا محصولات مشخص.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Developer Nima Shadman
  * Author URI: https://nimashadman.ir
  * License: GPL-2.0-or-later
@@ -38,7 +38,7 @@ final class SCH_SnappPay_Conditional_Hide {
 		add_action('admin_menu', [$this, 'add_settings_page']);
 		add_action('admin_init', [$this, 'register_settings']);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-		add_filter('woocommerce_available_payment_gateways', [$this, 'maybe_hide_gateway']);
+		add_filter('woocommerce_available_payment_gateways', [$this, 'maybe_hide_gateway'], 999);
 	}
 
 	public function declare_hpos_compatibility(): void {
@@ -133,7 +133,8 @@ final class SCH_SnappPay_Conditional_Hide {
 						</th>
 						<td>
 							<input id="sch_gateway_id" class="regular-text" type="text" name="<?php echo esc_attr(self::OPTION_KEY); ?>[gateway_id]" value="<?php echo esc_attr($options['gateway_id']); ?>">
-							<p class="description"><?php echo esc_html__('معمولاً مقدار آن snappay است. اگر افزونه اسنپ‌پی شما شناسه دیگری برای درگاه ووکامرس دارد، همان را وارد کنید.', 'snappay-conditional-hide'); ?></p>
+							<p class="description"><?php echo esc_html__('برای سایت شما احتمالاً wc_gateway_snapppay است. افزونه علاوه بر این مقدار، هر درگاهی که نام یا شناسه آن شامل snappay یا snapppay باشد را هم تشخیص می‌دهد.', 'snappay-conditional-hide'); ?></p>
+							<?php $this->render_gateway_hint(); ?>
 						</td>
 					</tr>
 					<tr>
@@ -191,9 +192,13 @@ final class SCH_SnappPay_Conditional_Hide {
 
 	public function maybe_hide_gateway(array $gateways): array {
 		$options = $this->get_options();
-		$gateway_id = $options['gateway_id'];
 
-		if ($options['enabled'] !== 'yes' || $gateway_id === '' || !isset($gateways[$gateway_id]) || !function_exists('WC')) {
+		if ($options['enabled'] !== 'yes' || !function_exists('WC')) {
+			return $gateways;
+		}
+
+		$gateway_keys = $this->find_matching_gateway_keys($gateways, $options['gateway_id']);
+		if (empty($gateway_keys)) {
 			return $gateways;
 		}
 
@@ -207,12 +212,50 @@ final class SCH_SnappPay_Conditional_Hide {
 			$variation_id = (int) ($cart_item['variation_id'] ?? 0);
 
 			if ($this->cart_item_matches_rules($product_id, $variation_id, $options)) {
-				unset($gateways[$gateway_id]);
+				foreach ($gateway_keys as $gateway_key) {
+					unset($gateways[$gateway_key]);
+				}
 				break;
 			}
 		}
 
 		return $gateways;
+	}
+
+	private function find_matching_gateway_keys(array $gateways, string $configured_gateway_id): array {
+		$matches = [];
+		$needles = array_filter(array_unique([
+			$configured_gateway_id,
+			'snappay',
+			'snapppay',
+			'wc_gateway_snapppay',
+			'wc_gateway_snappay',
+		]));
+
+		foreach ($gateways as $gateway_key => $gateway) {
+			$haystacks = [
+				(string) $gateway_key,
+				is_object($gateway) && isset($gateway->id) ? (string) $gateway->id : '',
+				is_object($gateway) && isset($gateway->method_title) ? (string) $gateway->method_title : '',
+				is_object($gateway) && isset($gateway->title) ? (string) $gateway->title : '',
+				is_object($gateway) ? get_class($gateway) : '',
+			];
+
+			foreach ($needles as $needle) {
+				if ($needle === '') {
+					continue;
+				}
+
+				foreach ($haystacks as $haystack) {
+					if ($haystack !== '' && stripos($haystack, $needle) !== false) {
+						$matches[] = (string) $gateway_key;
+						break 2;
+					}
+				}
+			}
+		}
+
+		return array_values(array_unique($matches));
 	}
 
 	private function cart_item_matches_rules(int $product_id, int $variation_id, array $options): bool {
@@ -308,6 +351,35 @@ final class SCH_SnappPay_Conditional_Hide {
 		}
 
 		return $result;
+	}
+
+	private function render_gateway_hint(): void {
+		if (!function_exists('WC') || !WC()->payment_gateways()) {
+			return;
+		}
+
+		$gateways = WC()->payment_gateways()->payment_gateways();
+		if (empty($gateways)) {
+			return;
+		}
+
+		echo '<p class="description"><strong>' . esc_html__('درگاه‌های شناسایی‌شده:', 'snappay-conditional-hide') . '</strong></p>';
+		echo '<ul style="margin-top: 0;">';
+
+		foreach ($gateways as $gateway_key => $gateway) {
+			$title = is_object($gateway) && isset($gateway->method_title) ? $gateway->method_title : '';
+			if ($title === '' && is_object($gateway) && isset($gateway->title)) {
+				$title = $gateway->title;
+			}
+
+			printf(
+				'<li><code>%s</code>%s</li>',
+				esc_html((string) $gateway_key),
+				$title !== '' ? ' - ' . esc_html(wp_strip_all_tags((string) $title)) : ''
+			);
+		}
+
+		echo '</ul>';
 	}
 
 	private function sanitize_int_list($value): array {
