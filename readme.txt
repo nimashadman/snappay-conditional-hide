@@ -10,7 +10,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Hide the SnappPay WooCommerce payment gateway for selected categories, brands, or products.
 
-Developer: Nima Shadman - https://nimashadman.ir
+Nima Shadman - https://nimashadman.ir
 
 == Description ==
 

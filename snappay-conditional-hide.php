@@ -4,7 +4,7 @@
  * Plugin URI: https://github.com/nimashadman/snappay-conditional-hide
  * Description: مخفی کردن درگاه اسنپ‌پی ووکامرس بر اساس دسته‌بندی، برند یا محصولات مشخص.
  * Version: 1.0.2
- * Author: Developer Nima Shadman
+ * Author: Nima Shadman
  * Author URI: https://nimashadman.ir
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
