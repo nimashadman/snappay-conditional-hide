@@ -4,7 +4,7 @@ Tags: woocommerce, snappay, payment gateway, درگاه پرداخت, اسنپ �
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,6 +56,10 @@ Developer: Nima Shadman - https://nimashadman.ir
 بله، اگر برندهای فروشگاه به صورت taxonomy ثبت شده باشند، می‌توانید taxonomy برند را از تنظیمات افزونه انتخاب کنید.
 
 == Changelog ==
+
+= 1.0.2 =
+
+* Category rules now include child categories.
 
 = 1.0.1 =
 

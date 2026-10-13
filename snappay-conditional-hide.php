@@ -3,7 +3,7 @@
  * Plugin Name: SnappPay Conditional Gateway Hide
  * Plugin URI: https://github.com/nimashadman/snappay-conditional-hide
  * Description: مخفی کردن درگاه اسنپ‌پی ووکامرس بر اساس دسته‌بندی، برند یا محصولات مشخص.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Developer Nima Shadman
  * Author URI: https://nimashadman.ir
  * License: GPL-2.0-or-later
@@ -265,7 +265,7 @@ final class SCH_SnappPay_Conditional_Hide {
 			return true;
 		}
 
-		if ($product_id > 0 && !empty($options['category_ids']) && has_term($options['category_ids'], 'product_cat', $product_id)) {
+		if ($product_id > 0 && $this->product_matches_categories($product_id, $options['category_ids'])) {
 			return true;
 		}
 
@@ -280,6 +280,22 @@ final class SCH_SnappPay_Conditional_Hide {
 		}
 
 		return false;
+	}
+
+	private function product_matches_categories(int $product_id, array $category_ids): bool {
+		if (empty($category_ids)) {
+			return false;
+		}
+
+		$category_ids_with_children = $category_ids;
+		foreach ($category_ids as $category_id) {
+			$children = get_term_children($category_id, 'product_cat');
+			if (!is_wp_error($children) && !empty($children)) {
+				$category_ids_with_children = array_merge($category_ids_with_children, array_map('absint', $children));
+			}
+		}
+
+		return has_term(array_values(array_unique($category_ids_with_children)), 'product_cat', $product_id);
 	}
 
 	private function render_term_multiselect(string $field, string $taxonomy, array $selected_ids): void {
